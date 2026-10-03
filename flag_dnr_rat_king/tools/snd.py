@@ -25,12 +25,13 @@ def build(orig, newmp3, out):
     if B.count(struct.pack('<II',13,oldn)): patch_after(13, oldn, n)  # m_nLoopEnd
     f32=lambda x: struct.unpack('<f',struct.pack('<f',x))[0]
     od=struct.pack('<d',f32(oldn/44100)); assert B.count(od)==1; i=B.index(od); B[i:i+8]=struct.pack('<d',f32(dur))  # m_flDuration
-    nb=lz4.block.compress(bytes(B),store_size=False)
+    nb=lz4.block.compress(bytes(B),mode='high_compression',compression=10,store_size=False)
     assert lz4.block.decompress(nb,uncompressed_size=u1)==bytes(B)
     tail=c[120+c0+c1:]
     newc=c[:120+c0]+nb+tail
     struct.pack_into('<I',newc,84,len(nb))
-    struct.pack_into('<I',newc,56,c0+len(nb))
+    assert struct.unpack_from('<I',c,52)[0]==c0+c1  # total compressed size
+    struct.pack_into('<I',newc,52,c0+len(nb))
     delta=len(newc)-len(c)
     hdr=bytearray(d[:cs])
     struct.pack_into('<I',hdr,0,hs+delta)
